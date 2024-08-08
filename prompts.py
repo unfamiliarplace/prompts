@@ -137,7 +137,10 @@ class PromptFormatting:
         rounded = f'{round(f, 1)}'
         return truncated if truncated == rounded else f'{truncated} or {rounded}'
 
-class PromptOperations:
+class PromptFlows:
+
+    # TODO lol
+    STOP_CODE = '{<([STOP])>}'
 
     @staticmethod
     def until_quit(action: callable, do_while: True, continue_keyword: str='Enter', quit_keyword: str='Q', continue_string: str='continue', quit_string: str='quit', indent: int=0):
@@ -162,13 +165,36 @@ class PromptOperations:
                 break
 
     @staticmethod
-    def loop(routine: callable, args: list=[], kwargs: dict={},
-            blank_before: bool=True, blank_after: bool=True):
+    def loop(routine: callable, do_while: False, args: list=[], kwargs: dict={}, blank_before: bool=True, blank_after: bool=True):
+        """
+        Repeat the given routine, passing it the given args and kwargs, and return a list of responses to it.
+        The program asks each time if continuing is desired. To 
+        """
+        def sub() -> bool:
+            response = routine(*args, **kwargs)
+            if response == PromptFlows.STOP_CODE:
+                return False
+            else:
+                responses.append(response)
+
+            if blank_before:
+                print()
+
+            _go = Prompts.bool('Continue')
+
+            if blank_after:
+                print()
+
+            return _go
+
         responses = []
-        go = Prompts.bool('Start')
+
+        if do_while:
+            go = sub()
+        else:
+            go = Prompts.bool('Start')
+
         while go:
-            responses.append(routine(*args, **kwargs))
-            if blank_before: print()
-            go = Prompts.bool('Continue')
-            if blank_after: print()
+            go = sub()
+
         return responses
