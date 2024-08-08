@@ -1,3 +1,6 @@
+class PromptException(Exception):
+    pass
+
 class PromptIndents:
     INDENT_AMOUNT = 4
     INDENT = ' ' * INDENT_AMOUNT
@@ -141,12 +144,16 @@ class PromptOperations:
         if do_while:
             action()
         
-        if not continue_keyword:
-            c_keyword_printable = 'Enter'
-        else:
-            c_keyword_printable = continue_string
+        if (continue_keyword == quit_keyword):
+            raise PromptException(f'Continue and quit keywords must not be the same: {continue_keyword} and {quit_keyword}')
 
-        prompt = f'Hit {c_keyword_printable} to {continue_string} or {quit_keyword} to {quit_string}'
+        if not continue_keyword:
+            continue_keyword = 'Enter'
+
+        if not quit_keyword:
+            quit_keyword = 'Enter'
+
+        prompt = f'Hit {continue_keyword} to {continue_string} or {quit_keyword} to {quit_string}'
         while True:
             choice = PromptIndents.input(prompt, indent).upper().strip()
             if ((not choice) and (continue_keyword == 'Enter')) or (choice == continue_keyword):
