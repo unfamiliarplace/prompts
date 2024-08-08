@@ -137,7 +137,7 @@ class PromptFormatting:
 class PromptOperations:
 
     @staticmethod
-    def until_quit(action: callable, do_while: True, continue_keyword: str='continue', quit_keyword: str='quit', continue_string: str='', quit_string: str='Q', indent: int=0):
+    def until_quit(action: callable, do_while: True, continue_keyword: str='Enter', quit_keyword: str='Q', continue_string: str='continue', quit_string: str='quit', indent: int=0):
         if do_while:
             action()
         
@@ -148,10 +148,10 @@ class PromptOperations:
 
         prompt = f'Hit {c_keyword_printable} to {continue_string} or {quit_keyword} to {quit_string}'
         while True:
-            choice = PromptIndents.input(prompt, indent).upper()
-            if choice == continue_keyword:
+            choice = PromptIndents.input(prompt, indent).upper().strip()
+            if ((not choice) and (continue_keyword == 'Enter')) or (choice == continue_keyword):
                 action()
-            elif choice == quit_keyword:
+            elif (((not choice) and (quit_keyword == 'Enter')) or (choice == quit_keyword)):
                 break
 
     @staticmethod
