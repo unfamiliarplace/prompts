@@ -139,13 +139,14 @@ class PromptFormatting:
 
 class PromptFlows:
 
-    # TODO lol
-    STOP_CODE = '{<([STOP])>}'
-
     @staticmethod
-    def until_quit(action: callable, do_while: True, continue_keyword: str='Enter', quit_keyword: str='Q', continue_string: str='continue', quit_string: str='quit', indent: int=0):
+    def until_quit(routine: callable, args: list=[], kwargs: dict={}, do_while: bool=True, continue_keyword: str='Enter', quit_keyword: str='Q', continue_string: str='continue', quit_string: str='quit', indent: int=0):
+        """
+        # TODO Seems like a first draft of loop
+        """
+
         if do_while:
-            action()
+            routine(*args, **kwargs)
         
         if (continue_keyword == quit_keyword):
             raise PromptException(f'Continue and quit keywords must not be the same: {continue_keyword} and {quit_keyword}')
@@ -160,32 +161,49 @@ class PromptFlows:
         while True:
             choice = PromptIndents.input(prompt, indent).upper().strip()
             if ((not choice) and (continue_keyword == 'Enter')) or (choice == continue_keyword):
-                action()
+                routine(*args, **kwargs)
             elif (((not choice) and (quit_keyword == 'Enter')) or (choice == quit_keyword)):
                 break
 
     @staticmethod
-    def loop(routine: callable, do_while: False, args: list=[], kwargs: dict={}, blank_before: bool=True, blank_after: bool=True):
+    def loop(routine: callable, args: list=[], kwargs: dict={}, blank_before: bool=True, blank_after: bool=False, do_while: bool=True, ask_continue: bool=True, count: bool=False):
         """
         Repeat the given routine, passing it the given args and kwargs, and return a list of responses to it.
-        The program asks each time if continuing is desired. To 
+
+        Iff do_while is False, the user is asked to start the loop.
+
+        Iff ask_continue is True, the user is asked to continue after each iteration.
+
+        Iff count is True, the iteration number is printed before the routine.
+
+        By default, it asks to continue each time. If ask_continue is False, a response of None from the routine
+        will instead be interpreted as the command to stop.
         """
         def sub() -> bool:
-            response = routine(*args, **kwargs)
-            if response == PromptFlows.STOP_CODE:
-                return False
-            else:
-                responses.append(response)
 
             if blank_before:
                 print()
 
-            _go = Prompts.bool('Continue')
+            if count:
+                print(f'{len(responses) + 1}')
+
+            response = routine(*args, **kwargs)
+
+            if ask_continue:
+                responses.append(response)
+                keep_going = Prompts.bool('Continue')
+
+            else:
+                if response is None:
+                    return False
+                else:
+                    responses.append(response)
+                    keep_going = True
 
             if blank_after:
                 print()
 
-            return _go
+            return keep_going
 
         responses = []
 
