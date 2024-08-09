@@ -72,7 +72,7 @@ class Prompts:
         return choice.strip()
 
     @staticmethod
-    def bool(prompt: str='Yes or no', indent: int=0, strict: bool=False, default: bool=True, allow_blank: bool=False) -> bool:
+    def bool(prompt: str='Yes or no', indent: int=0, strict: bool=False, default: bool|None=True, allow_blank: bool=False) -> bool:
         """
         Prompt yes/no and return a bool.
         If a default is given, only give the non-default if it's explicitly input.
@@ -91,7 +91,7 @@ class Prompts:
         elif default is False:
             return choice == Prompts.YES
         else:
-            return True if choice == YES else False if choice == NO else None
+            return True if choice == Prompts.YES else False if choice == Prompts.NO else None
 
     @staticmethod
     def name(prompt: str='Name', indent: int=0, allow_blank: bool=False) -> str:
@@ -148,8 +148,6 @@ class PromptFlows:
 
         def sub() -> None:
             routine(*args, **kwargs)
-            if between:
-                between()
         
         if (continue_trigger == quit_trigger):
             raise PromptException(f'Continue and quit triggers must not be the same: {continue_trigger} and {quit_trigger}')
@@ -167,6 +165,8 @@ class PromptFlows:
 
         while True:
             choice = PromptIndents.input(prompt, indent).upper().strip()
+            if between:
+                between()
 
             if ((not choice) and (continue_trigger == 'Enter')) or (choice == continue_trigger):
                 sub()
