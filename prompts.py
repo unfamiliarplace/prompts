@@ -140,35 +140,46 @@ class PromptFormatting:
 class PromptFlows:
 
     @staticmethod
-    def until_quit(routine: callable, args: list=[], kwargs: dict={}, do_while: bool=True, continue_keyword: str='Enter', quit_keyword: str='Q', continue_string: str='continue', quit_string: str='quit', indent: int=0):
+    def until_quit(routine: callable, args: list=[], kwargs: dict={}, do_while: bool=True, between: callable=None, continue_trigger: str='Enter', quit_trigger: str='Q', continue_string: str='continue', quit_string: str='quit', indent: int=0):
         """
-        # TODO Seems like a first draft of loop
+        # TODO Clarify purpose; how is this different from loop?
+        # TODO Idea: make a looping class that has a core loop, but builders that incorporate both these methods' many functions, rather than two methods with huge numbers of kwargs
         """
+
+        def sub() -> None:
+            routine(*args, **kwargs)
+            if between:
+                between()
+        
+        if (continue_trigger == quit_trigger):
+            raise PromptException(f'Continue and quit triggers must not be the same: {continue_trigger} and {quit_trigger}')
+
+        if not continue_trigger:
+            continue_trigger = 'Enter'
+
+        if not quit_trigger:
+            quit_trigger = 'Q'
 
         if do_while:
-            routine(*args, **kwargs)
-        
-        if (continue_keyword == quit_keyword):
-            raise PromptException(f'Continue and quit keywords must not be the same: {continue_keyword} and {quit_keyword}')
+            sub()
 
-        if not continue_keyword:
-            continue_keyword = 'Enter'
+        prompt = f'Hit {continue_trigger} to {continue_string} or {quit_trigger} to {quit_string}'
 
-        if not quit_keyword:
-            quit_keyword = 'Enter'
-
-        prompt = f'Hit {continue_keyword} to {continue_string} or {quit_keyword} to {quit_string}'
         while True:
             choice = PromptIndents.input(prompt, indent).upper().strip()
-            if ((not choice) and (continue_keyword == 'Enter')) or (choice == continue_keyword):
-                routine(*args, **kwargs)
-            elif (((not choice) and (quit_keyword == 'Enter')) or (choice == quit_keyword)):
+
+            if ((not choice) and (continue_trigger == 'Enter')) or (choice == continue_trigger):
+                sub()
+
+            elif (((not choice) and (quit_trigger == 'Enter')) or (choice == quit_trigger)):
                 break
 
     @staticmethod
-    def loop(routine: callable, args: list=[], kwargs: dict={}, blank_before: bool=True, blank_after: bool=False, do_while: bool=True, ask_continue: bool=True, count: bool=False):
+    def loop(routine: callable, args: list=[], kwargs: dict={}, do_while: bool=True, between: callable=None, ask_continue: bool=True, count: bool=False):
         """
         Repeat the given routine, passing it the given args and kwargs, and return a list of responses to it.
+
+        between is a routine (no args) to be run between each pair of routines.
 
         Iff do_while is False, the user is asked to start the loop.
 
@@ -180,9 +191,6 @@ class PromptFlows:
         will instead be interpreted as the command to stop.
         """
         def sub() -> bool:
-
-            if blank_before:
-                print()
 
             if count:
                 print(f'{len(responses) + 1}')
@@ -200,8 +208,8 @@ class PromptFlows:
                     responses.append(response)
                     keep_going = True
 
-            if blank_after:
-                print()
+            if keep_going and between:
+                between()
 
             return keep_going
 
