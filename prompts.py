@@ -7,6 +7,9 @@ class PromptFlags:
         INDEX = 0
         NUMBER = 1
         OBJECT = 2
+        
+class PromptException(Exception):
+    pass
 
 class PromptIndents:
     INDENT_AMOUNT = 4
@@ -79,7 +82,7 @@ class Prompts:
         return choice.strip()
 
     @staticmethod
-    def bool(prompt: str='Yes or no', indent: int=0, strict: bool=False, default: bool=True, allow_blank: bool=False) -> bool:
+    def bool(prompt: str='Yes or no', indent: int=0, strict: bool=False, default: bool|None=True, allow_blank: bool=False) -> bool:
         """
         Prompt yes/no and return a bool.
         If a default is given, only give the non-default if it's explicitly input.
@@ -98,7 +101,7 @@ class Prompts:
         elif default is False:
             return choice == Prompts.YES
         else:
-            return True if choice == YES else False if choice == NO else None
+            return True if choice == Prompts.YES else False if choice == Prompts.NO else None
 
     @staticmethod
     def name(prompt: str='Name', indent: int=0, allow_blank: bool=False) -> str:
@@ -152,34 +155,90 @@ class PromptFormatting:
         rounded = f'{round(f, 1)}'
         return truncated if truncated == rounded else f'{truncated} or {rounded}'
 
-class PromptOperations:
+class PromptFlows:
 
     @staticmethod
-    def until_quit(action: callable, do_while: True, continue_keyword: str='continue', quit_keyword: str='quit', continue_string: str='', quit_string: str='Q', indent: int=0):
-        if do_while:
-            action()
-        
-        if not continue_keyword:
-            c_keyword_printable = 'Enter'
-        else:
-            c_keyword_printable = continue_string
+    def until_quit(routine: callable, args: list=[], kwargs: dict={}, do_while: bool=True, between: callable=None, continue_trigger: str='Enter', quit_trigger: str='Q', continue_string: str='continue', quit_string: str='quit', indent: int=0):
+        """
+        # TODO Clarify purpose; how is this different from loop?
+        # TODO Idea: make a looping class that has a core loop, but builders that incorporate both these methods' many functions, rather than two methods with huge numbers of kwargs
+        """
 
-        prompt = f'Hit {c_keyword_printable} to {continue_string} or {quit_keyword} to {quit_string}'
+        def sub() -> None:
+            routine(*args, **kwargs)
+        
+        if (continue_trigger == quit_trigger):
+            raise PromptException(f'Continue and quit triggers must not be the same: {continue_trigger} and {quit_trigger}')
+
+        if not continue_trigger:
+            continue_trigger = 'Enter'
+
+        if not quit_trigger:
+            quit_trigger = 'Q'
+
+        if do_while:
+            sub()
+
+        prompt = f'Hit {continue_trigger} to {continue_string} or {quit_trigger} to {quit_string}'
+
         while True:
-            choice = PromptIndents.input(prompt, indent).upper()
-            if choice == continue_keyword:
-                action()
-            elif choice == quit_keyword:
+            choice = PromptIndents.input(prompt, indent).upper().strip()
+            if between:
+                between()
+
+            if ((not choice) and (continue_trigger == 'Enter')) or (choice == continue_trigger):
+                sub()
+
+            elif (((not choice) and (quit_trigger == 'Enter')) or (choice == quit_trigger)):
                 break
 
     @staticmethod
-    def loop(routine: callable, args: list=[], kwargs: dict={},
-            blank_before: bool=True, blank_after: bool=True):
+    def loop(routine: callable, args: list=[], kwargs: dict={}, do_while: bool=True, between: callable=None, ask_continue: bool=True, count: bool=False):
+        """
+        Repeat the given routine, passing it the given args and kwargs, and return a list of responses to it.
+
+        between is a routine (no args) to be run between each pair of routines.
+
+        Iff do_while is False, the user is asked to start the loop.
+
+        Iff ask_continue is True, the user is asked to continue after each iteration.
+
+        Iff count is True, the iteration number is printed before the routine.
+
+        By default, it asks to continue each time. If ask_continue is False, a response of None from the routine
+        will instead be interpreted as the command to stop.
+        """
+        def sub() -> bool:
+
+            if count:
+                print(f'{len(responses) + 1}')
+
+            response = routine(*args, **kwargs)
+
+            if ask_continue:
+                responses.append(response)
+                keep_going = Prompts.bool('Continue')
+
+            else:
+                if response is None:
+                    return False
+                else:
+                    responses.append(response)
+                    keep_going = True
+
+            if keep_going and between:
+                between()
+
+            return keep_going
+
         responses = []
-        go = Prompts.bool('Start')
+
+        if do_while:
+            go = sub()
+        else:
+            go = Prompts.bool('Start')
+
         while go:
-            responses.append(routine(*args, **kwargs))
-            if blank_before: print()
-            go = Prompts.bool('Continue')
-            if blank_after: print()
+            go = sub()
+
         return responses
