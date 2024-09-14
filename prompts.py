@@ -1,3 +1,13 @@
+from __future__ import annotations
+from enum import Enum
+
+class PromptFlags:
+
+    class ReturnFormat(Enum):
+        INDEX = 0
+        NUMBER = 1
+        OBJECT = 2
+
 class PromptIndents:
     INDENT_AMOUNT = 4
     INDENT = ' ' * INDENT_AMOUNT
@@ -113,7 +123,7 @@ class Prompts:
         return float(choice) if choice else None
 
     @staticmethod
-    def choice(prompt: str='Options', choices=[], indent: int=0, allow_blank: bool=False) -> int:
+    def choice(prompt: str='Options', choices=[], indent: int=0, allow_blank: bool=False, return_format: PromptFlags.ReturnFormat=PromptFlags.ReturnFormat.NUMBER) -> int:
         if not choices:
             raise Exception
         
@@ -124,7 +134,15 @@ class Prompts:
             choice_strs.append(f'{str(i + 1).ljust(max_cols)}: {choice}')
         prompt = f'{prompt}:\n\n' + '\n'.join(choice_strs) + '\n\nChoice'
         
-        return Prompts.int(prompt, indent=indent, lower=1, upper=len(choices), allow_blank=allow_blank)
+        n = Prompts.int(prompt, indent=indent, lower=1, upper=len(choices), allow_blank=allow_blank)
+
+        match return_format:
+            case PromptFlags.ReturnFormat.INDEX:
+                return n - 1
+            case PromptFlags.ReturnFormat.NUMBER:
+                return n
+            case PromptFlags.ReturnFormat.OBJECT:
+                return choices[n - 1]
 
 class PromptFormatting:
 
